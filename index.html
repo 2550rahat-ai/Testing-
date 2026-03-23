@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashlight App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .flashlight-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 80px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flashlight-btn.off {
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            color: #7f8c8d;
+        }
+
+        .flashlight-btn.on {
+            background: linear-gradient(145deg, #f1c40f, #f39c12);
+            color: #fff;
+            box-shadow: 0 0 60px rgba(241, 196, 15, 0.6),
+                        0 0 100px rgba(241, 196, 15, 0.3),
+                        inset 0 0 20px rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .flashlight-btn:active {
+            transform: scale(0.95);
+        }
+
+        .status {
+            margin-top: 30px;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .status.on {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+
+        .error {
+            color: #e74c3c;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(231, 76, 60, 0.1);
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            color: #95a5a6;
+            font-size: 0.9rem;
+            max-width: 400px;
+        }
+
+        /* Hidden video element for camera access */
+        #video {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔦 Flashlight</h1>
+        
+        <button id="flashlightBtn" class="flashlight-btn off" onclick="toggleFlashlight()">
+            💡
+        </button>
+        
+        <div id="status" class="status">Tap to turn ON</div>
+        
+        <div id="error" class="error"></div>
+        
+        <p class="instructions">
+            This app uses your device's camera flash. Please allow camera permission when prompted.
+            <br><br>
+            Note: Works best on Android devices with Chrome browser. iOS support is limited.
+        </p>
+        
+        <!-- Hidden video element to access camera -->
+        <video id="video" autoplay playsinline></video>
+    </div>
+
+    <script>
+        let stream = null;
+        let track = null;
+        let isFlashOn = false;
+        let torchSupported = false;
+
+        const btn = document.getElementById('flashlightBtn');
+        const status = document.getElementById('status');
+        const errorDiv = document.getElementById('error');
+
+        // Check if torch/flashlight is supported
+        async function checkTorchSupport() {
+            try {
+                // Try to get camera with torch capability
+                const constraints = {
+                    video: {
+                        facingMode: 'environment'
+                    }
+                };
+                
+                // Check if getSupportedConstraints exists and supports torch
+                if (navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints) {
+                    const supported = navigator.mediaDevices.getSupportedConstraints();
+                    torchSupported = supported.torch === true;
+                }
+                
+                return torchSupported;
+            } catch (err) {
+                console.log('Torch support check failed:', err);
+                return false;
+            }
+        }
+
+        // Initialize camera
+        async function initCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                // Get the video track for torch control
+                track = stream.getVideoTracks()[0];
+                
+                // Check if torch is available on this track
+                const capabilities = track.getCapabilities();
+                torchSupported = capabilities.torch || false;
+                
+                console.log('Camera initialized, torch supported:', torchSupported);
+                
+                return true;
+            } catch (err) {
+                showError('Camera access denied or not available: ' + err.message);
+                console.error('Camera error:', err);
+                return false;
+            }
+        }
+
+        // Toggle flashlight
+        async function toggleFlashlight() {
+            errorDiv.classList.remove('show');
+            
+            // First time - initialize camera
+            if (!stream) {
+                const initialized = await initCamera();
+                if (!initialized) return;
+            }
+
+            if (!torchSupported) {
+                showError('Flashlight not supported on this device/browser. Try using Android Chrome.');
+                return;
+            }
+
+            try {
+                isFlashOn = !isFlashOn;
+                
+                // Apply torch setting
+                await track.applyConstraints({
+                    advanced: [{ torch: isFlashOn }]
+                });
+
+                updateUI();
+                
+            } catch (err) {
+                showError('Failed to toggle flashlight: ' + err.message);
+                console.error('Torch error:', err);
+                isFlashOn = !isFlashOn; // Revert state
+            }
+        }
+
+        // Update UI based on state
+        function updateUI() {
+            if (isFlashOn) {
+                btn.classList.remove('off');
+                btn.classList.add('on');
+                status.textContent = '🔆 Flashlight is ON';
+                status.classList.add('on');
+            } else {
+                btn.classList.remove('on');
+                btn.classList.add('off');
+                status.textContent = 'Tap to turn ON';
+                status.classList.remove('on');
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            errorDiv.textContent = '⚠️ ' + message;
+            errorDiv.classList.add('show');
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Check support on load
+        window.addEventListener('load', () => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showError('Your browser does not support camera access. Please use a modern browser like Chrome.');
+            }
+        });
+    </script>
+</body>
+</html>
