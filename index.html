@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flashlight App</title>
+    <title>Flashlight Pro</title>
     <style>
         * {
             margin: 0;
@@ -11,157 +11,527 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-off: #00d4ff;
+            --primary-on: #00ff88;
+            --bg-dark: #0a0a0f;
+            --bg-panel: #151520;
+            --bg-button: #1a1a2e;
+            --text-muted: #6b7280;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
-        }
-
-        .container {
-            text-align: center;
-            padding: 20px;
-        }
-
-        h1 {
-            margin-bottom: 30px;
-            font-size: 2.5rem;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-        }
-
-        .flashlight-btn {
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            font-size: 80px;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            position: relative;
             overflow: hidden;
         }
 
-        .flashlight-btn.off {
-            background: linear-gradient(145deg, #2c3e50, #34495e);
-            color: #7f8c8d;
+        /* Top LED indicators */
+        .led-strip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(180deg, #0d0d15 0%, var(--bg-panel) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
 
-        .flashlight-btn.on {
-            background: linear-gradient(145deg, #f1c40f, #f39c12);
-            color: #fff;
-            box-shadow: 0 0 60px rgba(241, 196, 15, 0.6),
-                        0 0 100px rgba(241, 196, 15, 0.3),
-                        inset 0 0 20px rgba(255, 255, 255, 0.3);
-            animation: pulse 2s infinite;
+        .led {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #2a2a3e;
+            transition: all 0.3s ease;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        .led.active {
+            background: var(--primary-off);
+            box-shadow: 0 0 10px var(--primary-off);
         }
 
-        .flashlight-btn:active {
-            transform: scale(0.95);
+        .led.on {
+            background: var(--primary-on);
+            box-shadow: 0 0 10px var(--primary-on);
         }
 
-        .status {
+        .led.center {
+            width: 8px;
+            height: 8px;
+        }
+
+        /* Side accents */
+        .side-accent {
+            position: fixed;
+            top: 60px;
+            bottom: 80px;
+            width: 8px;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                var(--primary-off) 20%, 
+                var(--primary-off) 80%, 
+                transparent 100%);
+            opacity: 0.3;
+            transition: all 0.5s ease;
+        }
+
+        .side-accent.left {
+            left: 0;
+        }
+
+        .side-accent.right {
+            right: 0;
+        }
+
+        .side-accent.on {
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                var(--primary-on) 20%, 
+                var(--primary-on) 80%, 
+                transparent 100%);
+            opacity: 0.8;
+            box-shadow: 0 0 20px var(--primary-on);
+        }
+
+        /* Main container */
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        /* Main power button */
+        .power-button-wrapper {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Outer glow ring */
+        .glow-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--primary-off) 60deg,
+                var(--primary-off) 120deg,
+                transparent 180deg,
+                transparent 180deg,
+                var(--primary-off) 240deg,
+                var(--primary-off) 300deg,
+                transparent 360deg
+            );
+            opacity: 0.3;
+            animation: rotate 10s linear infinite;
+            transition: all 0.5s ease;
+        }
+
+        .glow-ring.on {
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--primary-on) 60deg,
+                var(--primary-on) 120deg,
+                transparent 180deg,
+                transparent 180deg,
+                var(--primary-on) 240deg,
+                var(--primary-on) 300deg,
+                transparent 360deg
+            );
+            opacity: 1;
+            animation: rotate 3s linear infinite, pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { filter: blur(0px) brightness(1); }
+            50% { filter: blur(2px) brightness(1.3); }
+        }
+
+        /* Inner ring */
+        .inner-ring {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Button container */
+        .button-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #1e1e32, #141425);
+            box-shadow: 
+                20px 20px 40px #0a0a12,
+                -20px -20px 40px #242440,
+                inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .button-container:active {
+            transform: scale(0.98);
+            box-shadow: 
+                10px 10px 20px #0a0a12,
+                -10px -10px 20px #242440,
+                inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+        }
+
+        .button-container.on {
+            background: linear-gradient(145deg, #1a3d2e, #0f2a1f);
+            box-shadow: 
+                0 0 60px rgba(0, 255, 136, 0.3),
+                20px 20px 40px #0a0a12,
+                -20px -20px 40px #242440,
+                inset 0 0 0 2px rgba(0, 255, 136, 0.2);
+        }
+
+        /* Power icon */
+        .power-icon {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        .power-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: var(--primary-off);
+            stroke-width: 3;
+            stroke-linecap: round;
+            filter: drop-shadow(0 0 10px var(--primary-off));
+            transition: all 0.5s ease;
+        }
+
+        .button-container.on .power-icon svg {
+            stroke: var(--primary-on);
+            filter: drop-shadow(0 0 20px var(--primary-on));
+            animation: power-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes power-pulse {
+            0%, 100% { filter: drop-shadow(0 0 20px var(--primary-on)); }
+            50% { filter: drop-shadow(0 0 40px var(--primary-on)); }
+        }
+
+        /* SOS Button */
+        .sos-button {
             margin-top: 30px;
-            font-size: 1.2rem;
-            padding: 15px 30px;
+            padding: 12px 40px;
             border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            border: none;
+            background: linear-gradient(145deg, #1e1e32, #141425);
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            cursor: pointer;
+            box-shadow: 
+                5px 5px 10px #0a0a12,
+                -5px -5px 10px #242440;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
         }
 
-        .status.on {
-            background: rgba(241, 196, 15, 0.2);
-            color: #f1c40f;
+        .sos-button:hover {
+            color: var(--primary-off);
+            box-shadow: 
+                0 0 20px rgba(0, 212, 255, 0.2),
+                5px 5px 10px #0a0a12,
+                -5px -5px 10px #242440;
         }
 
+        .sos-button.on {
+            color: var(--primary-on);
+            background: linear-gradient(145deg, #1a3d2e, #0f2a1f);
+            animation: sos-blink 1s infinite;
+        }
+
+        @keyframes sos-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Bottom panel */
+        .bottom-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: linear-gradient(0deg, #0d0d15 0%, var(--bg-panel) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .bottom-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            border: none;
+            background: linear-gradient(145deg, #1e1e32, #141425);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 
+                5px 5px 10px #0a0a12,
+                -5px -5px 10px #242440;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-btn:hover {
+            color: var(--primary-off);
+            transform: translateY(-2px);
+        }
+
+        .bottom-btn.on {
+            color: var(--primary-on);
+            background: linear-gradient(145deg, #1a3d2e, #0f2a1f);
+        }
+
+        .app-title {
+            text-align: center;
+        }
+
+        .app-title h2 {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .app-title p {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 2px;
+        }
+
+        /* Status text */
+        .status-text {
+            position: absolute;
+            top: 80px;
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.5s ease;
+        }
+
+        .status-text.on {
+            color: var(--primary-on);
+            text-shadow: 0 0 10px var(--primary-on);
+        }
+
+        /* Error message */
         .error {
-            color: #e74c3c;
-            margin-top: 20px;
-            padding: 15px;
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            padding: 12px 24px;
             border-radius: 10px;
-            background: rgba(231, 76, 60, 0.1);
+            font-size: 12px;
             display: none;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
         .error.show {
             display: block;
+            animation: shake 0.5s ease;
         }
 
-        .instructions {
-            margin-top: 20px;
-            color: #95a5a6;
-            font-size: 0.9rem;
-            max-width: 400px;
+        @keyframes shake {
+            0%, 100% { transform: translateX(-50%); }
+            25% { transform: translateX(-55%); }
+            75% { transform: translateX(-45%); }
         }
 
-        /* Hidden video element for camera access */
+        /* Hidden video */
         #video {
             display: none;
+        }
+
+        /* Ripple effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.3);
+            transform: scale(0);
+            animation: ripple-effect 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-effect {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Screen flash effect */
+        .screen-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .screen-flash.active {
+            animation: screen-flash-anim 0.1s ease;
+        }
+
+        @keyframes screen-flash-anim {
+            0% { opacity: 0.8; }
+            100% { opacity: 0; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔦 Flashlight</h1>
-        
-        <button id="flashlightBtn" class="flashlight-btn off" onclick="toggleFlashlight()">
-            💡
-        </button>
-        
-        <div id="status" class="status">Tap to turn ON</div>
-        
-        <div id="error" class="error"></div>
-        
-        <p class="instructions">
-            This app uses your device's camera flash. Please allow camera permission when prompted.
-            <br><br>
-            Note: Works best on Android devices with Chrome browser. iOS support is limited.
-        </p>
-        
-        <!-- Hidden video element to access camera -->
-        <video id="video" autoplay playsinline></video>
+    <!-- Screen flash overlay -->
+    <div class="screen-flash" id="screenFlash"></div>
+
+    <!-- LED strip -->
+    <div class="led-strip" id="ledStrip">
+        <!-- LEDs generated by JS -->
     </div>
 
+    <!-- Side accents -->
+    <div class="side-accent left" id="sideLeft"></div>
+    <div class="side-accent right" id="sideRight"></div>
+
+    <!-- Error message -->
+    <div class="error" id="error"></div>
+
+    <!-- Main container -->
+    <div class="container">
+        <div class="status-text" id="statusText">Ready</div>
+
+        <!-- Power button -->
+        <div class="power-button-wrapper">
+            <div class="glow-ring" id="glowRing"></div>
+            <div class="inner-ring">
+                <div class="button-container" id="powerBtn" onclick="toggleFlashlight(event)">
+                    <div class="power-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SOS button -->
+        <button class="sos-button" id="sosBtn" onclick="toggleSOS()">SOS</button>
+    </div>
+
+    <!-- Bottom panel -->
+    <div class="bottom-panel">
+        <button class="bottom-btn" id="settingsBtn" onclick="showSettings()" title="Settings">⚙️</button>
+        <div class="app-title">
+            <h2>Flash Light</h2>
+            <p>App UI</p>
+        </div>
+        <button class="bottom-btn" id="soundBtn" onclick="toggleSound()" title="Sound">🔊</button>
+    </div>
+
+    <!-- Hidden video -->
+    <video id="video" autoplay playsinline></video>
+
     <script>
+        // State
         let stream = null;
         let track = null;
         let isFlashOn = false;
+        let isSOSActive = false;
+        let sosInterval = null;
+        let soundEnabled = true;
         let torchSupported = false;
 
-        const btn = document.getElementById('flashlightBtn');
-        const status = document.getElementById('status');
+        // Elements
+        const powerBtn = document.getElementById('powerBtn');
+        const glowRing = document.getElementById('glowRing');
+        const sideLeft = document.getElementById('sideLeft');
+        const sideRight = document.getElementById('sideRight');
+        const statusText = document.getElementById('statusText');
+        const sosBtn = document.getElementById('sosBtn');
+        const soundBtn = document.getElementById('soundBtn');
         const errorDiv = document.getElementById('error');
+        const screenFlash = document.getElementById('screenFlash');
 
-        // Check if torch/flashlight is supported
-        async function checkTorchSupport() {
-            try {
-                // Try to get camera with torch capability
-                const constraints = {
-                    video: {
-                        facingMode: 'environment'
-                    }
-                };
-                
-                // Check if getSupportedConstraints exists and supports torch
-                if (navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints) {
-                    const supported = navigator.mediaDevices.getSupportedConstraints();
-                    torchSupported = supported.torch === true;
-                }
-                
-                return torchSupported;
-            } catch (err) {
-                console.log('Torch support check failed:', err);
-                return false;
+        // Initialize LEDs
+        function initLEDs() {
+            const strip = document.getElementById('ledStrip');
+            for (let i = 0; i < 13; i++) {
+                const led = document.createElement('div');
+                led.className = 'led';
+                if (i === 6) led.classList.add('center');
+                strip.appendChild(led);
             }
+        }
+
+        // Update LEDs
+        function updateLEDs(on) {
+            const leds = document.querySelectorAll('.led');
+            leds.forEach((led, i) => {
+                setTimeout(() => {
+                    led.classList.toggle('active', on && !isFlashOn);
+                    led.classList.toggle('on', on && isFlashOn);
+                }, i * 30);
+            });
         }
 
         // Initialize camera
@@ -176,92 +546,185 @@
                 };
 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.getElementById('video');
-                video.srcObject = stream;
-                
-                // Get the video track for torch control
+                document.getElementById('video').srcObject = stream;
                 track = stream.getVideoTracks()[0];
-                
-                // Check if torch is available on this track
+
                 const capabilities = track.getCapabilities();
                 torchSupported = capabilities.torch || false;
-                
-                console.log('Camera initialized, torch supported:', torchSupported);
-                
+
                 return true;
             } catch (err) {
-                showError('Camera access denied or not available: ' + err.message);
-                console.error('Camera error:', err);
+                showError('Camera access denied. Please allow camera permission.');
                 return false;
             }
         }
 
         // Toggle flashlight
-        async function toggleFlashlight() {
+        async function toggleFlashlight(event) {
+            if (event) createRipple(event);
+
             errorDiv.classList.remove('show');
-            
-            // First time - initialize camera
+
             if (!stream) {
                 const initialized = await initCamera();
                 if (!initialized) return;
             }
 
             if (!torchSupported) {
-                showError('Flashlight not supported on this device/browser. Try using Android Chrome.');
+                // Fallback: use screen flash
+                screenFlash.classList.add('active');
+                setTimeout(() => screenFlash.classList.remove('active'), 100);
+                showError('Hardware flashlight not available. Using screen flash.');
                 return;
             }
 
+            // Stop SOS if running
+            if (isSOSActive) stopSOS();
+
             try {
                 isFlashOn = !isFlashOn;
-                
-                // Apply torch setting
                 await track.applyConstraints({
                     advanced: [{ torch: isFlashOn }]
                 });
 
                 updateUI();
-                
+                playSound(isFlashOn ? 'on' : 'off');
+
             } catch (err) {
-                showError('Failed to toggle flashlight: ' + err.message);
-                console.error('Torch error:', err);
-                isFlashOn = !isFlashOn; // Revert state
+                showError('Failed to toggle flashlight');
+                isFlashOn = !isFlashOn;
             }
         }
 
-        // Update UI based on state
+        // Update UI
         function updateUI() {
-            if (isFlashOn) {
-                btn.classList.remove('off');
-                btn.classList.add('on');
-                status.textContent = '🔆 Flashlight is ON';
-                status.classList.add('on');
-            } else {
-                btn.classList.remove('on');
-                btn.classList.add('off');
-                status.textContent = 'Tap to turn ON';
-                status.classList.remove('on');
+            const elements = [powerBtn, glowRing, sideLeft, sideRight, sosBtn, soundBtn];
+            elements.forEach(el => el.classList.toggle('on', isFlashOn));
+
+            statusText.textContent = isFlashOn ? 'Flashlight ON' : 'Ready';
+            statusText.classList.toggle('on', isFlashOn);
+
+            updateLEDs(true);
+        }
+
+        // SOS Mode
+        async function toggleSOS() {
+            if (isSOSActive) {
+                stopSOS();
+                return;
+            }
+
+            if (!stream) {
+                const initialized = await initCamera();
+                if (!initialized) return;
+            }
+
+            if (!torchSupported) {
+                showError('SOS mode requires hardware flashlight');
+                return;
+            }
+
+            isSOSActive = true;
+            sosBtn.classList.add('on');
+            statusText.textContent = 'SOS Mode';
+            statusText.classList.add('on');
+
+            const sosPattern = [200, 200, 200, 600, 600, 600, 200, 200, 200, 1400];
+            let index = 0;
+
+            async function runSOS() {
+                if (!isSOSActive) return;
+
+                const duration = sosPattern[index];
+                const on = index < 6 && index % 2 === 0;
+
+                try {
+                    await track.applyConstraints({
+                        advanced: [{ torch: on }]
+                    });
+
+                    isFlashOn = on;
+                    updateUI();
+
+                    index = (index + 1) % sosPattern.length;
+                    sosInterval = setTimeout(runSOS, duration);
+
+                } catch (err) {
+                    stopSOS();
+                }
+            }
+
+            runSOS();
+        }
+
+        function stopSOS() {
+            isSOSActive = false;
+            clearTimeout(sosInterval);
+            sosBtn.classList.remove('on');
+
+            if (track) {
+                track.applyConstraints({ advanced: [{ torch: false }] });
+            }
+            isFlashOn = false;
+            updateUI();
+        }
+
+        // Sound toggle
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+            soundBtn.classList.toggle('on', !soundEnabled);
+        }
+
+        // Play sound (simulated with vibration)
+        function playSound(type) {
+            if (!soundEnabled) return;
+            if (navigator.vibrate) {
+                navigator.vibrate(type === 'on' ? [50] : [30]);
             }
         }
 
-        // Show error message
-        function showError(message) {
-            errorDiv.textContent = '⚠️ ' + message;
+        // Settings
+        function showSettings() {
+            alert('Settings:\n\n• Brightness: Max\n• Strobe: Disabled\n• SOS: Enabled\n• Sound: ' + (soundEnabled ? 'On' : 'Off'));
+        }
+
+        // Ripple effect
+        function createRipple(event) {
+            const button = event.currentTarget;
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+
+            const rect = button.getBoundingClientRect();
+            const size = 20;
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (event.clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (event.clientY - rect.top - size / 2) + 'px';
+
+            button.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        // Show error
+        function showError(msg) {
+            errorDiv.textContent = msg;
             errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 3000);
         }
 
-        // Cleanup on page unload
+        // Cleanup
         window.addEventListener('beforeunload', () => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
+            if (stream) stream.getTracks().forEach(t => t.stop());
         });
 
-        // Check support on load
-        window.addEventListener('load', () => {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showError('Your browser does not support camera access. Please use a modern browser like Chrome.');
-            }
-        });
+        // Init
+        initLEDs();
+        updateLEDs(false);
+
+        // Check support
+        if (!navigator.mediaDevices?.getUserMedia) {
+            showError('Browser not supported. Use Chrome on Android.');
+        }
     </script>
 </body>
 </html>
