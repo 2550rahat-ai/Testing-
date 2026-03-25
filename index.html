@@ -501,6 +501,14 @@
         let soundEnabled = true;
         let torchSupported = false;
 
+        // Audio elements for ON and OFF sounds (online URLs)
+        const soundOn = new Audio('https://www.soundjay.com/buttons/sounds/button-4.mp3');
+        const soundOff = new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3');
+
+        // Preload sounds
+        soundOn.preload = 'auto';
+        soundOff.preload = 'auto';
+
         // Elements
         const powerBtn = document.getElementById('powerBtn');
         const glowRing = document.getElementById('glowRing');
@@ -676,11 +684,25 @@
             soundBtn.classList.toggle('on', !soundEnabled);
         }
 
-        // Play sound (simulated with vibration)
+        // Play sound - FIXED: Now plays 2 different online sounds for ON and OFF
         function playSound(type) {
             if (!soundEnabled) return;
-            if (navigator.vibrate) {
-                navigator.vibrate(type === 'on' ? [50] : [30]);
+            
+            // Play different sounds based on type
+            if (type === 'on') {
+                soundOn.currentTime = 0; // Reset to start
+                soundOn.play().catch(err => {
+                    console.log('Audio play failed:', err);
+                    // Fallback to vibration if audio fails
+                    if (navigator.vibrate) navigator.vibrate([50]);
+                });
+            } else if (type === 'off') {
+                soundOff.currentTime = 0; // Reset to start
+                soundOff.play().catch(err => {
+                    console.log('Audio play failed:', err);
+                    // Fallback to vibration if audio fails
+                    if (navigator.vibrate) navigator.vibrate([30]);
+                });
             }
         }
 
